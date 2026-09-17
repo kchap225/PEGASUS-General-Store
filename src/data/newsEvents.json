@@ -1,0 +1,23 @@
+[
+  {
+    "title": "Fresh sourdough every Tuesday & Friday",
+    "date": "2026-09-08",
+    "description": "Bellbird Bakery loaves land on our shelves by 7:30 AM. Pre-order yours to guarantee a loaf.",
+    "image_url": "/images/sourdough.jpg",
+    "category": "New Arrival"
+  },
+  {
+    "title": "New Safari Meats biltong range in store",
+    "date": "2026-09-05",
+    "description": "Authentic South African biltong, boerewors and sosaties — freshly stocked this week.",
+    "image_url": "/images/biltong.jpg",
+    "category": "New Arrival"
+  },
+  {
+    "title": "Gluten-free pastry drop from TGF",
+    "date": "2026-09-03",
+    "description": "A new batch of gluten-free croissants and tarts arrived this morning. Limited quantities.",
+    "image_url": "/images/gf-bakery.jpg",
+    "category": "New Arrival"
+  }
+]

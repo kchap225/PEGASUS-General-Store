@@ -1,0 +1,30 @@
+[
+  {
+    "name": "Bellbird Bakery",
+    "region": "Christchurch",
+    "story": "Artisan bakers crafting sourdough and French-style pastries with a focus on natural fermentation and local flour.",
+    "product_range": "Sourdough breads, French pastries",
+    "image_url": "/images/sourdough.jpg"
+  },
+  {
+    "name": "Safari Meats",
+    "region": "Christchurch",
+    "story": "Specialist South African butchers bringing authentic flavours to Canterbury — biltong, boerewors and marinated specialities.",
+    "product_range": "Biltong, boerewors, sosaties, marinated steaks",
+    "image_url": "/images/biltong.jpg"
+  },
+  {
+    "name": "TGF Gluten Free Bakery",
+    "region": "Christchurch",
+    "story": "A dedicated gluten-free bakery producing treats and baked goods that never compromise on taste or texture.",
+    "product_range": "Gluten-free baked goods, pastries",
+    "image_url": "/images/gf-bakery.jpg"
+  },
+  {
+    "name": "Red Kitchen",
+    "region": "Auckland",
+    "story": "Ready-made meals crafted for quality, nutrition and convenience for busy households.",
+    "product_range": "Ready meals",
+    "image_url": "/images/ready-meals.jpg"
+  }
+]

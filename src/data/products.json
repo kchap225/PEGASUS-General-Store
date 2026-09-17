@@ -1,0 +1,68 @@
+[
+  {
+    "id": "sourdough-loaf",
+    "name": "Sourdough loaf",
+    "description": "Naturally fermented sourdough baked fresh in Christchurch.",
+    "price": 9.5,
+    "category": "Bakery",
+    "available_for_preorder": true,
+    "image_url": "/images/sourdough.jpg",
+    "supplier": "Bellbird Bakery",
+    "created_date": "2026-09-01"
+  },
+  {
+    "id": "gluten-free-croissants",
+    "name": "Gluten-free croissants",
+    "description": "A flaky, family-friendly bakery favourite made without gluten.",
+    "price": 8.5,
+    "category": "Bakery",
+    "available_for_preorder": true,
+    "image_url": "/images/gf-bakery.jpg",
+    "supplier": "TGF Gluten Free Bakery",
+    "created_date": "2026-09-02"
+  },
+  {
+    "id": "biltong-box",
+    "name": "Biltong snack box",
+    "description": "Classic South African biltong, ready for easy grazing and sharing.",
+    "price": 18.0,
+    "category": "Specialty Meats",
+    "available_for_preorder": true,
+    "image_url": "/images/biltong.jpg",
+    "supplier": "Safari Meats",
+    "created_date": "2026-09-03"
+  },
+  {
+    "id": "ready-meal-set",
+    "name": "Healthy ready-meal pack",
+    "description": "A convenient pack of balanced meals for busy evenings.",
+    "price": 24.0,
+    "category": "Ready Meals",
+    "available_for_preorder": true,
+    "image_url": "/images/ready-meals.jpg",
+    "supplier": "Red Kitchen",
+    "created_date": "2026-09-04"
+  },
+  {
+    "id": "pantry-staples",
+    "name": "Pantry staples bundle",
+    "description": "Everyday essentials for sauces, baking, and pantry favourites.",
+    "price": 16.5,
+    "category": "Pantry",
+    "available_for_preorder": true,
+    "image_url": "/images/pantry.jpg",
+    "supplier": "The Artisan Pantry",
+    "created_date": "2026-09-05"
+  },
+  {
+    "id": "local-wine-mini",
+    "name": "Local wine selection",
+    "description": "A tasting set of local Canterbury wines for a relaxed evening in.",
+    "price": 29.0,
+    "category": "Wine & Drinks",
+    "available_for_preorder": false,
+    "image_url": "/images/wine.jpg",
+    "supplier": "North Canterbury vineyards",
+    "created_date": "2026-09-06"
+  }
+]
