@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { MapPin } from "lucide-react";
 import Reveal from "@/components/Reveal";
 import { Image } from "@/components/ui/image";
-import { api } from "@/api/client";
+import { suppliersApi } from "@/api/client";
 
 const FALLBACK = [
   { name: "Bellbird Bakery", region: "Christchurch", story: "Artisan bakers crafting sourdough and French-style pastries with a focus on natural fermentation and local flour.", product_range: "Sourdough breads, French pastries", image_url: "/images/sourdough.jpg" },
@@ -22,7 +22,7 @@ export default function Suppliers() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.suppliers.list("-created_date", 50)
+    suppliersApi.list("-created_date", 50)
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
         setSuppliers(list.length ? list : FALLBACK);

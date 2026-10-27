@@ -57,7 +57,7 @@ export default function SiteFooter() {
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.2em] text-harvest">Message the store</div>
             <p className="mt-3 text-linen/70 font-body leading-relaxed">Got a question, a product request, or a new supplier collaboration in mind? We'd love to hear from you.</p>
-            <a href={`mailto:${STORE.email}`} className="mt-4 inline-flex items-center gap-2 rounded-full bg-harvest px-5 py-2.5 text-sm font-semibold text-linen hover:bg-harvest-dark transition-colors">
+            <a href="#message-form" className="mt-4 inline-flex items-center gap-2 rounded-full bg-harvest px-5 py-2.5 text-sm font-semibold text-linen hover:bg-harvest-dark transition-colors">
               <MessageSquare className="w-4 h-4" /> Message us
             </a>
           </div>

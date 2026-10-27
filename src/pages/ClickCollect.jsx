@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Minus, Plus, ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { api } from '@/api/client';
+import { productsApi, ordersApi } from '@/api/client';
 
 const emptyForm = {
   customer_name: '',
@@ -19,7 +19,7 @@ export default function ClickCollect() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api.products.list('-created_date', 20)
+    productsApi.list('-created_date', 20)
       .then((data) => setProducts(Array.isArray(data) ? data : []))
       .catch(() => setProducts([]));
   }, []);

@@ -7,6 +7,8 @@ import { AuthProvider } from '@/lib/AuthContext';
 import ScrollToTop from './components/ScrollToTop';
 import Home from './pages/Home';
 import ClickCollect from './pages/ClickCollect';
+import Admin from './pages/Admin';
+import Login from './pages/Login';
 
 function App() {
   return (
@@ -17,6 +19,8 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/click-and-collect" element={<ClickCollect />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/login" element={<Login />} />
             <Route path="*" element={<PageNotFound />} />
           </Routes>
         </Router>

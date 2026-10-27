@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import Reveal from "@/components/Reveal";
 import { Image } from "@/components/ui/image";
-import { api } from "@/api/client";
+import { newsEventsApi } from "@/api/client";
 import { IMAGES } from "@/lib/storeInfo";
 
 const FALLBACK = [
@@ -27,7 +27,7 @@ export default function NewsEvents() {
   const scrollerRef = useRef(null);
 
   useEffect(() => {
-    api.newsEvents.list("-date", 20)
+    newsEventsApi.list("-date", 20)
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
         setItems(list.length ? list : FALLBACK);
@@ -58,7 +58,7 @@ export default function NewsEvents() {
         </Reveal>
       </div>
 
-      <div ref={scrollerRef} className="no-scrollbar mt-12 flex gap-6 overflow-x-auto px-5 sm:px-8 snap-x snap-mandatory pb-4">
+      <div ref={scrollerRef} className="no-scrollbar mt-12 flex justify-start gap-6 overflow-x-auto px-5 sm:justify-center sm:px-8 snap-x snap-mandatory pb-4">
         {items.map((item, i) => (
           <article key={i} className="snap-start flex-shrink-0 w-[300px] sm:w-[360px] rounded-3xl overflow-hidden border border-stone/15 bg-white shadow-sm hover:shadow-lg transition-shadow">
             <div className="h-44 overflow-hidden">

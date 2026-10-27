@@ -23,6 +23,7 @@ export const STORE = {
 };
 
 export const IMAGES = {
+  heroBanner: "/images/hero-banner.png",
   heroInterior: "/images/hero-interior.jpg",
   storefront: "/images/storefront.jpg",
   sourdough: "/images/sourdough.jpg",
