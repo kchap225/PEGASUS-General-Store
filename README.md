@@ -147,6 +147,70 @@ npm run lint      # Check the code for style/errors — fix these before committ
 
 Do not commit `dist/` or `node_modules/` — both are generated and are already ignored by Git.
 
+## Deploy to Cloudflare Pages
+
+This is how the site is published from a local computer. You need a Cloudflare account that has access to the `pegasus-general-store` Pages project. The first time you deploy from a computer, Wrangler (Cloudflare's command-line tool) will ask you to log in to Cloudflare in your browser — follow that prompt once, and later deploys will reuse that login.
+
+**Do these steps in order, from the project folder. Do not skip the build step — Cloudflare deploys the built files, not your source code.**
+
+### Step 1 — Make sure your `.env` is in place
+
+Vite bakes the `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` values into the build at build time. So:
+
+- Your `.env` file must exist and be filled in **before** you build (see Step 4 above).
+- If you change `.env`, or change any code, you must build again and deploy again. The old deployment will not pick up the change on its own.
+- If you deploy without a valid `.env`, the deployed site will fail to load, just like it does locally.
+
+### Step 2 — Commit first (recommended)
+
+Wrangler will warn you if you have uncommitted changes, because then the deployed site may not match what is in Git. To avoid that confusion, commit your changes on `development` first, then deploy.
+
+If you do want to deploy with uncommitted changes anyway, add `--commit-dirty=true` to the deploy command below to silence that warning.
+
+### Step 3 — Build the site
+
+```bash
+npm run build
+```
+
+You should see output ending with something like:
+
+```text
+✓ built in 924ms
+```
+
+That creates/refreshes the `dist/` folder. Do not edit files inside `dist/` by hand — they are regenerated on every build. The `dist/_redirects` file (which makes the site's internal pages like `/click-and-collect` and `/admin` work on Cloudflare) is copied there automatically from `public/_redirects`.
+
+### Step 4 — Deploy the built files to Cloudflare Pages
+
+```bash
+npx wrangler pages deploy dist --project-name=pegasus-general-store
+```
+
+Notes for a first-timer:
+
+- `npx` downloads Wrangler if it is not already installed, so the first run can take a little while.
+- The project name must be exactly `pegasus-general-store`. If you mistype it, Cloudflare will try to create a different project or fail.
+- A successful deploy ends with `Deployment complete!` and a link like:
+  ```text
+  https://10a15336.pegasus-general-store.pages.dev
+  ```
+  That link is the deployment to check. The part before `.pegasus-general-store.pages.dev` changes with each deploy — that is normal, it is a unique address for that deployment.
+
+### Step 5 — Check the deployed site
+
+Open the link from Step 4 and check the homepage loads, then check at least one other page (for example Click & Collect). If the homepage is blank, the most likely cause is a missing or wrong `.env` at build time — go back to Step 1, fix `.env`, then repeat Steps 3 and 4.
+
+### Deploy checklist (short version)
+
+```bash
+git checkout development
+git pull
+npm install          # only needed the first time, or if package.json changed
+npm run build
+npx wrangler pages deploy dist --project-name=pegasus-general-store
+```
+
 ## Where things live
 
 ```text
@@ -184,6 +248,10 @@ To change store details that visitors see (address, hours, open/closed status), 
 | `npm install` fails | Check `node -v` is 18 or higher. If it still fails, delete `node_modules` and run `npm install` again. Do not hand-edit `package-lock.json`. |
 | Admin login signs you straight out | That account does not have `user_metadata.role = "admin"` in Supabase Authentication. See Step 5. |
 | You edited `.env` but nothing changed | Vite only reads `.env` at startup. Stop the server and run `npm run dev` again. |
+| Deployed site is blank, but local site works | The deploy was built without a valid `.env`. Put the right `.env` in place, run `npm run build` again, then deploy again. |
+| Wrangler asks you to log in | That is normal the first time on a computer. Follow the browser prompt to log in to the Cloudflare account that owns the `pegasus-general-store` project. |
+| Wrangler warns about uncommitted changes | Commit on `development` first, then deploy. Or add `--commit-dirty=true` to the deploy command if you really mean to deploy uncommitted work. |
+| Deployed site shows an old version | You probably deployed without rebuilding. Run `npm run build` first, every time, then deploy, and open the new deployment link Wrangler prints — not an old link. |
 
 ## Rules for anyone working on this project
 
