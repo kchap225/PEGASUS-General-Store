@@ -43,7 +43,7 @@ const DEPARTMENTS = [
   },
 ];
 
-const ALSO = ["Dairy & Eggs", "Frozen", "Household Essentials", "Post & Pharmacy"];
+const ALSO = ["Dairy & Eggs", "Frozen", "Household Essentials", "Pharmacy"];
 
 export default function ProductRange() {
   return (
