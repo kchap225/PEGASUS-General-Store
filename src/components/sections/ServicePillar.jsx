@@ -1,4 +1,4 @@
-import { HeartPulse, Megaphone } from "lucide-react";
+import { HeartPulse, Megaphone, Package } from "lucide-react";
 import Reveal from "@/components/Reveal";
 import { Image } from "@/components/ui/image";
 
@@ -9,6 +9,13 @@ const SERVICES = [
     text: "Essential over-the-counter remedies, health and first-aid essentials, and everyday pharmacy needs — so the basics are always close to home.",
     meta: "OTC remedies & health essentials",
     image: "/images/pharmacy.png",
+  },
+  {
+    icon: Package,
+    title: "NZ Post Agency",
+    text: "Send and collect parcels, post letters, and take care of everyday postal services right here in the village — no trip to town needed.",
+    meta: "Parcels, letters & postal services",
+    image: "/images/post-parcel.jpg",
   },
   {
     icon: Megaphone,
@@ -35,7 +42,7 @@ export default function ServicePillar() {
           </div>
         </Reveal>
 
-        <div className="mt-14 grid md:grid-cols-2 gap-6 lg:gap-8 max-w-2xl">
+        <div className="mt-14 grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {SERVICES.map((s, i) => (
             <Reveal key={s.title} delay={i * 0.1}>
               <div className="h-full rounded-3xl border border-stone/15 bg-white overflow-hidden flex flex-col">

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Minus, Plus, ShoppingBag, Store } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { productsApi, ordersApi } from '@/api/client';
+import { productsApi, ordersApi, formatPickupReference } from '@/api/client';
 
 const emptyForm = {
   customer_name: '',
@@ -64,13 +64,17 @@ export default function ClickCollect() {
     }
 
     try {
+      // Capture the pickup slot before the form is cleared below.
+      const pickup = { collection_date: form.collection_date, collection_time: form.collection_time };
       const response = await ordersApi.submitClickCollectOrder({
         ...form,
         items: cartItems.map((item) => `${item.name} x${item.qty}`).join(', '),
         total: subtotal,
       });
 
-      setSubmitted(response?.order || { success: true });
+      // The full Supabase id stays on the order object (background / Admin
+      // use) but is never rendered to the customer — see the display below.
+      setSubmitted({ ...response?.order, ...pickup });
       setError('');
       setCart({});
       setForm(emptyForm);
@@ -220,7 +224,7 @@ export default function ClickCollect() {
               {submitted && (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                   <p className="font-semibold">Order placed! ✓</p>
-                  <p className="mt-1">Reference: {submitted.id || 'PGS'}</p>
+                  <p className="mt-1">Reference: {formatPickupReference(submitted)}</p>
                   <p className="mt-1 text-xs">Please bring this reference when collecting. Payment at counter.</p>
                 </div>
               )}

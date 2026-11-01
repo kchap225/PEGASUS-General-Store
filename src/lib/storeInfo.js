@@ -13,7 +13,12 @@ export const STORE = {
   ],
   // weekday 0=Sun ... 6=Sat -> [openHour, closeHour] 24h
   openHours: { 0: [8, 18], 1: [7, 20], 2: [7, 20], 3: [7, 20], 4: [7, 20], 5: [7, 20], 6: [7, 20] },
-  coords: { lat: -43.3453, lng: 172.6404 },
+  // 60 Pegasus Main Street, Pegasus 7612 — geocoded, not the previous
+  // Flaxton/Rangiora point that put the map pin in the wrong place.
+  coords: { lat: -43.31228, lng: 172.69609 },
+  // 'auto' (default): status is worked out from openHours. 'open' / 'closed'
+  // let an admin override it in the Admin panel, e.g. for a holiday closure.
+  statusOverride: 'auto',
   social: {
     facebook: "https://www.facebook.com/pegasusgeneralstore",
     instagram: "https://www.instagram.com/pegasusgeneralstore",
@@ -46,6 +51,12 @@ export function getStoreStatus(now = new Date()) {
   const day = now.getDay();
   const h = now.getHours() + now.getMinutes() / 60;
   const [open, close] = STORE.openHours[day] || [7, 20];
+  if (STORE.statusOverride === 'open') {
+    return { open: true, label: "Open now", next: `Closes ${fmtHour(close)}` };
+  }
+  if (STORE.statusOverride === 'closed') {
+    return { open: false, label: "Closed", next: `Opens ${fmtHour(open)}` };
+  }
   const isOpen = h >= open && h < close;
   return {
     open: isOpen,
@@ -53,3 +64,42 @@ export function getStoreStatus(now = new Date()) {
     next: isOpen ? `Closes ${fmtHour(close)}` : `Opens ${fmtHour(open)}`,
   };
 }
+
+// Today's hours row, so the hero card never shows Monday–Friday hours on
+// a Sunday (the old code always used STORE.hours[0]).
+export function getTodayHours(now = new Date()) {
+  const day = now.getDay();
+  // hours rows are grouped: Mon–Fri, Saturday, Sunday
+  const row = day === 0 ? STORE.hours[2] : day === 6 ? STORE.hours[1] : STORE.hours[0];
+  return row || STORE.hours[0];
+}
+
+// Apply settings saved by the Admin panel. Called at module load for a
+// local-storage override, and again after an admin save so the storefront
+// in the same session picks the change up without a reload.
+export function applyStoreSettings(settings = {}) {
+  if (!settings || typeof settings !== 'object') return;
+  if (settings.address) STORE.address = settings.address;
+  if (settings.addressShort) STORE.addressShort = settings.addressShort;
+  if (settings.phone) STORE.phone = settings.phone;
+  if (settings.phoneHref) STORE.phoneHref = settings.phoneHref;
+  if (settings.email) STORE.email = settings.email;
+  if (Array.isArray(settings.hours) && settings.hours.length) STORE.hours = settings.hours;
+  if (settings.openHours && typeof settings.openHours === 'object') STORE.openHours = settings.openHours;
+  if (settings.coords && Number.isFinite(Number(settings.coords.lat)) && Number.isFinite(Number(settings.coords.lng))) {
+    STORE.coords = { lat: Number(settings.coords.lat), lng: Number(settings.coords.lng) };
+  }
+  if (settings.statusOverride) STORE.statusOverride = settings.statusOverride;
+}
+
+export function readLocalStoreSettings() {
+  try {
+    if (typeof window === 'undefined') return null;
+    const raw = window.localStorage.getItem('pegasus_store_settings');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+applyStoreSettings(readLocalStoreSettings());
