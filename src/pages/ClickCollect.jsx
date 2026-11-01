@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Minus, Plus, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Minus, Plus, ShoppingBag, Store } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { productsApi, ordersApi } from '@/api/client';
 
@@ -8,8 +8,17 @@ const emptyForm = {
   phone: '',
   email: '',
   collection_date: '',
+  collection_time: '',
   notes: '',
 };
+
+const COLLECTION_TIMES = [
+  '8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM',
+  '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
+  '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM',
+  '2:00 PM', '2:30 PM', '3:00 PM', '3:30 PM',
+  '4:00 PM', '4:30 PM', '5:00 PM', '5:30 PM',
+];
 
 export default function ClickCollect() {
   const [products, setProducts] = useState([]);
@@ -19,8 +28,8 @@ export default function ClickCollect() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    productsApi.list('-created_date', 20)
-      .then((data) => setProducts(Array.isArray(data) ? data : []))
+    productsApi.list('-created_at', 100)
+      .then((data) => setProducts(Array.isArray(data) ? data.filter(p => p.available_for_preorder) : []))
       .catch(() => setProducts([]));
   }, []);
 
@@ -49,13 +58,13 @@ export default function ClickCollect() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!form.customer_name || !form.phone || !form.collection_date || cartItems.length === 0) {
-      setError('Please add at least one item and complete your name, phone, and collection date.');
+    if (!form.customer_name || !form.phone || !form.collection_date || !form.collection_time || cartItems.length === 0) {
+      setError('Please add at least one item and complete your name, phone, collection date and time.');
       return;
     }
 
     try {
-      const response = await api.orders.submitClickCollectOrder({
+      const response = await ordersApi.submitClickCollectOrder({
         ...form,
         items: cartItems.map((item) => `${item.name} x${item.qty}`).join(', '),
         total: subtotal,
@@ -70,6 +79,8 @@ export default function ClickCollect() {
     }
   };
 
+  const inputClass = 'w-full rounded-xl border border-stone/20 bg-linen px-3 py-2.5 text-forest outline-none focus:border-harvest';
+
   return (
     <div className="min-h-screen bg-linen text-forest">
       <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:py-10">
@@ -78,11 +89,20 @@ export default function ClickCollect() {
             <ArrowLeft className="h-4 w-4" /> Back to home
           </Link>
           <div className="rounded-full bg-harvest/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-harvest-dark">
-            Click & Collect
+            Click &amp; Collect
           </div>
         </div>
 
+        {/* Pay at counter notice */}
+        <div className="mb-6 flex items-center gap-3 rounded-2xl border border-harvest/30 bg-harvest/5 px-5 py-4">
+          <Store className="h-5 w-5 shrink-0 text-harvest-dark" />
+          <p className="text-sm text-forest">
+            <span className="font-semibold">Pay at counter</span> — Place your order online and pay when you collect in store. No online payment required.
+          </p>
+        </div>
+
         <div className="grid gap-8 lg:grid-cols-[1.5fr_0.9fr]">
+          {/* Product list */}
           <section className="rounded-3xl border border-stone/15 bg-white p-6 shadow-sm sm:p-8">
             <div className="mb-6">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-harvest">Shop the pantry</p>
@@ -102,7 +122,6 @@ export default function ClickCollect() {
                       <div className="h-24 w-full overflow-hidden rounded-2xl bg-forest/5 sm:w-28">
                         <img src={product.image_url || '/images/pantry.jpg'} alt={product.name} className="h-full w-full object-cover" />
                       </div>
-
                       <div className="flex-1">
                         <div className="flex items-start justify-between gap-3">
                           <div>
@@ -112,7 +131,6 @@ export default function ClickCollect() {
                           <div className="text-base font-semibold text-harvest-dark">${Number(product.price || 0).toFixed(2)}</div>
                         </div>
                       </div>
-
                       <div className="flex items-center justify-between gap-3 sm:justify-end">
                         <div className="flex items-center rounded-full border border-stone/20 bg-white px-2 py-1">
                           <button type="button" onClick={() => updateQuantity(product.id, -1)} className="rounded-full p-2 text-forest hover:bg-stone/5" aria-label={`Decrease ${product.name}`}>
@@ -131,6 +149,7 @@ export default function ClickCollect() {
             </div>
           </section>
 
+          {/* Order form */}
           <aside className="rounded-3xl border border-stone/15 bg-white p-6 shadow-sm sm:p-8">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-harvest/10 p-2 text-harvest-dark">
@@ -155,49 +174,59 @@ export default function ClickCollect() {
               )}
             </div>
 
-            <div className="mt-6 border-t border-stone/15 pt-4 text-sm text-stone">
-              <div className="flex items-center justify-between">
-                <span>Subtotal</span>
-                <span className="font-semibold text-forest">${subtotal.toFixed(2)}</span>
+            {cartItems.length > 0 && (
+              <div className="mt-4 border-t border-stone/15 pt-4 text-sm">
+                <div className="flex items-center justify-between font-semibold text-forest">
+                  <span>Subtotal</span>
+                  <span>${subtotal.toFixed(2)}</span>
+                </div>
+                <p className="mt-1 text-xs text-stone">Pay at counter on collection.</p>
               </div>
-            </div>
+            )}
 
             <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
               <div>
-                <label className="mb-1 block text-sm font-medium text-forest">Name</label>
-                <input value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} className="w-full rounded-xl border border-stone/20 bg-linen px-3 py-2.5 text-forest outline-none focus:border-harvest" placeholder="Your name" />
+                <label className="mb-1 block text-sm font-medium text-forest">Name *</label>
+                <input value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} className={inputClass} placeholder="Your name" />
               </div>
-
               <div>
-                <label className="mb-1 block text-sm font-medium text-forest">Phone</label>
-                <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full rounded-xl border border-stone/20 bg-linen px-3 py-2.5 text-forest outline-none focus:border-harvest" placeholder="021 123 4567" />
+                <label className="mb-1 block text-sm font-medium text-forest">Phone *</label>
+                <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputClass} placeholder="021 123 4567" />
               </div>
-
               <div>
                 <label className="mb-1 block text-sm font-medium text-forest">Email</label>
-                <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full rounded-xl border border-stone/20 bg-linen px-3 py-2.5 text-forest outline-none focus:border-harvest" placeholder="you@example.com" />
+                <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputClass} placeholder="you@example.com" />
               </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-forest">Collection date</label>
-                <input type="date" value={form.collection_date} onChange={(e) => setForm({ ...form, collection_date: e.target.value })} className="w-full rounded-xl border border-stone/20 bg-linen px-3 py-2.5 text-forest outline-none focus:border-harvest" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-forest">Collection date *</label>
+                  <input type="date" value={form.collection_date} min={new Date().toISOString().split('T')[0]} onChange={(e) => setForm({ ...form, collection_date: e.target.value })} className={inputClass} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-forest">Collection time *</label>
+                  <select value={form.collection_time} onChange={(e) => setForm({ ...form, collection_time: e.target.value })} className={inputClass}>
+                    <option value="">Select time</option>
+                    {COLLECTION_TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
               </div>
-
               <div>
                 <label className="mb-1 block text-sm font-medium text-forest">Notes</label>
-                <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows="3" className="w-full rounded-xl border border-stone/20 bg-linen px-3 py-2.5 text-forest outline-none focus:border-harvest" placeholder="Anything else we should know?" />
+                <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows="2" className={inputClass} placeholder="Anything else we should know?" />
               </div>
 
               {error && <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
               {submitted && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-                  Order placed successfully. Reference: {submitted.id || 'PGS'}
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  <p className="font-semibold">Order placed! ✓</p>
+                  <p className="mt-1">Reference: {submitted.id || 'PGS'}</p>
+                  <p className="mt-1 text-xs">Please bring this reference when collecting. Payment at counter.</p>
                 </div>
               )}
 
               <button type="submit" className="w-full rounded-full bg-harvest px-5 py-3 text-sm font-semibold text-linen transition-colors hover:bg-harvest-dark">
-                Submit order
+                Place order — Pay at counter
               </button>
             </form>
           </aside>

@@ -9,6 +9,7 @@ import Home from './pages/Home';
 import ClickCollect from './pages/ClickCollect';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
+import Account from './pages/Account';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
             <Route path="/click-and-collect" element={<ClickCollect />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/account" element={<Account />} />
             <Route path="*" element={<PageNotFound />} />
           </Routes>
         </Router>

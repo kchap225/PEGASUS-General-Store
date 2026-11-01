@@ -1,0 +1,9 @@
+{
+    "remote.SSH.useCurlAndWgetConfigurationFiles": true,
+    "python.defaultInterpreterPath": "/opt/homebrew/bin/python3",
+    "dart.flutterSdkPath": "/Users/krishnaprasadchapagain/Desktop/Briefly/Flutter/flutter",
+    "http.systemCertificatesNode": true,
+    "security.workspace.trust.untrustedFiles": "open",
+    "git.enableSmartCommit": true,
+    "geminicodeassist.project": ""
+}

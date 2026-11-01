@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X, ShoppingBag, UserRound } from "lucide-react";
+import { supabase } from "@/api/client";
 
 const LINKS = [
   { label: "About", href: "#about" },
@@ -13,6 +14,7 @@ const LINKS = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -20,6 +22,21 @@ export default function Navbar() {
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Track Supabase Auth session
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const isAdmin = user?.user_metadata?.role === 'admin';
+  const accountHref = isAdmin ? '/admin' : user ? '/account' : '/login';
+  const accountLabel = isAdmin ? 'Admin' : user ? 'My Account' : 'Login';
 
   return (
     <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${scrolled ? "border-b border-white/15 bg-harvest-dark/95 shadow-sm backdrop-blur-md" : "bg-transparent"}`}>
@@ -36,9 +53,11 @@ export default function Navbar() {
             </a>
           ))}
           <Link to="/click-and-collect" className="inline-flex items-center gap-2 rounded-full bg-harvest px-5 py-2 text-sm font-semibold text-linen hover:bg-harvest-dark transition-colors">
-            <ShoppingBag className="w-4 h-4" /> Click & Collect
+            <ShoppingBag className="w-4 h-4" /> Click &amp; Collect
           </Link>
-          <Link to="/login" className="inline-flex items-center gap-2 text-sm font-semibold text-white/90 drop-shadow-sm transition-colors hover:text-harvest"><UserRound className="h-4 w-4" /> Login</Link>
+          <Link to={accountHref} className="inline-flex items-center gap-2 text-sm font-semibold text-white/90 drop-shadow-sm transition-colors hover:text-harvest">
+            <UserRound className="h-4 w-4" /> {accountLabel}
+          </Link>
         </div>
         <button className="p-2 text-white md:hidden" onClick={() => setOpen((v) => !v)} aria-label="Toggle menu">
           {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -52,9 +71,11 @@ export default function Navbar() {
             </a>
           ))}
           <Link to="/click-and-collect" onClick={() => setOpen(false)} className="inline-flex items-center justify-center gap-2 rounded-full bg-harvest px-5 py-2.5 text-sm font-semibold text-linen">
-            <ShoppingBag className="w-4 h-4" /> Click & Collect
+            <ShoppingBag className="w-4 h-4" /> Click &amp; Collect
           </Link>
-          <Link to="/login" onClick={() => setOpen(false)} className="inline-flex items-center gap-2 font-medium py-1 text-white/90"><UserRound className="h-4 w-4" /> Login</Link>
+          <Link to={accountHref} onClick={() => setOpen(false)} className="inline-flex items-center gap-2 font-medium py-1 text-white/90">
+            <UserRound className="h-4 w-4" /> {accountLabel}
+          </Link>
         </div>
       )}
     </header>

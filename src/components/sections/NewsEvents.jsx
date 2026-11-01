@@ -48,7 +48,7 @@ export default function NewsEvents() {
             <div className="max-w-2xl">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-harvest">The digital noticeboard</span>
               <h2 className="mt-3 font-heading font-extrabold text-3xl sm:text-4xl text-forest text-balance">News & events</h2>
-              <p className="mt-4 font-body text-lg text-stone leading-relaxed">What's arriving, what's on, and what's worth the trip. Follow along on social for the latest.</p>
+              <p className="mt-4 font-body text-lg text-stone leading-relaxed">What's arriving, what's on, and what's worth the trip.</p>
             </div>
             <div className="hidden sm:flex gap-2">
               <button onClick={() => scrollBy(-1)} className="rounded-full border border-stone/30 p-2.5 text-forest hover:bg-forest hover:text-linen transition-colors" aria-label="Scroll left"><ChevronLeft className="w-5 h-5" /></button>

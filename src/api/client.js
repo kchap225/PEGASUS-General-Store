@@ -11,11 +11,9 @@ const supabaseKey  = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
 // ---------------------------------------------------------------------------
-// Admin credentials (local check — no Supabase Auth required for admin)
+// Admin role identifier stored in Supabase user_metadata
 // ---------------------------------------------------------------------------
-const ADMIN_EMAIL    = 'admin@pegasusgeneralstore.co.nz';
-const ADMIN_PASSWORD = 'pegasus-admin';
-const STORAGE_KEY_ADMIN_SESSION = 'pegasus_admin_session';
+const ADMIN_ROLE = 'admin';
 
 // ---------------------------------------------------------------------------
 // productsApi — reads/writes the `products` table in Supabase
@@ -101,7 +99,7 @@ export const productsApi = {
 // ---------------------------------------------------------------------------
 export const ordersApi = {
   submitClickCollectOrder: async (data) => {
-    const { customer_name, phone, email, items, collection_date, notes, total } = data || {};
+    const { customer_name, phone, email, items, collection_date, collection_time, notes, total } = data || {};
     if (!customer_name || !phone || !collection_date) {
       throw new Error('Missing required fields (name, phone, collection date).');
     }
@@ -111,6 +109,7 @@ export const ordersApi = {
       email:           email           || null,
       items:           items           || '',
       collection_date,
+      collection_time: collection_time || null,
       notes:           notes           || null,
       total:           Number(total)   || 0,
       status:          'pending',
@@ -132,22 +131,33 @@ export const ordersApi = {
 };
 
 // ---------------------------------------------------------------------------
-// authApi — admin uses localStorage session; customers use Supabase Auth
+// authApi — admin + customers both use Supabase Auth
 // ---------------------------------------------------------------------------
 export const authApi = {
-  /** Admin login — checks hardcoded credentials, stores session in localStorage */
+  /**
+   * Admin login via Supabase Auth.
+   * The admin user must have user_metadata.role = 'admin' set in Supabase.
+   */
   adminLogin: async (email, password) => {
-    if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
-      throw new Error('Incorrect admin email or password.');
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
+    const role = data.user?.user_metadata?.role;
+    if (role !== ADMIN_ROLE) {
+      await supabase.auth.signOut();
+      throw new Error('This account does not have admin access.');
     }
-    localStorage.setItem(STORAGE_KEY_ADMIN_SESSION, 'active');
-    return { success: true, user: { email: ADMIN_EMAIL, role: 'admin' } };
+    return { success: true, user: data.user };
   },
 
-  adminSession: async () => localStorage.getItem(STORAGE_KEY_ADMIN_SESSION) === 'active',
+  /** Returns true if there is an active Supabase session with role=admin */
+  adminSession: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return false;
+    return session.user?.user_metadata?.role === ADMIN_ROLE;
+  },
 
   adminLogout: async () => {
-    localStorage.removeItem(STORAGE_KEY_ADMIN_SESSION);
+    await supabase.auth.signOut();
     return { success: true };
   },
 
@@ -156,7 +166,7 @@ export const authApi = {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name } },
+      options: { data: { name, role: 'customer' } },
     });
     if (error) throw new Error(error.message);
     return { success: true, user: data.user };
@@ -169,7 +179,7 @@ export const authApi = {
     return { success: true, user: data.user };
   },
 
-  /** Get the current Supabase Auth session */
+  /** Get the current Supabase Auth session user */
   customerSession: async () => {
     const { data: { session } } = await supabase.auth.getSession();
     return session?.user ?? null;

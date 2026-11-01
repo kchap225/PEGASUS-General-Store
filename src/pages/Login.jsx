@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, LogIn, ShieldCheck, UserRound } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { api } from '@/api/client';
+import { authApi } from '@/api/client';
 
 const inputClass = 'w-full rounded-xl border border-stone/20 bg-linen px-3 py-2.5 text-forest outline-none transition-colors placeholder:text-stone/60 focus:border-harvest focus:ring-2 focus:ring-harvest/10';
 
@@ -24,13 +24,13 @@ export default function Login() {
     setIsSubmitting(true);
     try {
       if (role === 'admin') {
-        await api.auth.adminLogin(form.email, form.password);
+        await authApi.adminLogin(form.email, form.password);
         navigate('/admin');
       } else if (isRegistering) {
-        await api.auth.customerRegister(form.name, form.email, form.password);
+        await authApi.customerRegister(form.name, form.email, form.password);
         navigate('/');
       } else {
-        await api.auth.customerLogin(form.email, form.password);
+        await authApi.customerLogin(form.email, form.password);
         navigate('/');
       }
     } catch (submitError) {
