@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Reveal from "@/components/Reveal";
-import { Image } from "@/components/ui/image";
 import { Sparkles, Store as StoreIcon, Heart, ArrowRight } from "lucide-react";
 
 /**

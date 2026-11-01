@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Check, Key, LogOut, PackageSearch, UserRound } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authApi, ordersApi, supabase } from '@/api/client';
+import { authApi, supabase } from '@/api/client';
 
 const inputClass = 'w-full rounded-xl border border-stone/20 bg-linen px-3 py-2.5 text-forest outline-none transition-colors placeholder:text-stone/60 focus:border-harvest focus:ring-2 focus:ring-harvest/10';
 

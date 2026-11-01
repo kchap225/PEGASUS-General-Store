@@ -1,6 +1,7 @@
 import Navbar from '@/components/Navbar';
 import Hero from '@/components/sections/Hero';
 import About from '@/components/sections/About';
+import StoreExperience from '@/components/sections/StoreExperience';
 import ProductRange from '@/components/sections/ProductRange';
 import Suppliers from '@/components/sections/Suppliers';
 import NewsEvents from '@/components/sections/NewsEvents';
@@ -15,6 +16,7 @@ export default function Home() {
       <main>
         <Hero />
         <About />
+        <StoreExperience />
         <ProductRange />
         <Suppliers />
         <NewsEvents />

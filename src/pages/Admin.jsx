@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import {
   ArrowLeft, Check, ClipboardList, Key, LogIn, LogOut,
-  PackagePlus, Pencil, ShieldCheck, Trash2,
+  PackagePlus, Pencil, ShieldCheck, Store, Trash2, Users,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { productsApi, ordersApi, authApi, supabase } from '@/api/client';
+import { productsApi, ordersApi, authApi, supabase, suppliersApi, storeSettingsApi, uploadImage } from '@/api/client';
+import { STORE, applyStoreSettings } from '@/lib/storeInfo';
 
 const categories = ['Bakery', 'Pantry', 'Ready Meals', 'Specialty Meats', 'Wine & Drinks', 'Other'];
 
@@ -41,6 +42,71 @@ function StatusBadge({ status }) {
   );
 }
 
+// File picker that uploads to Supabase Storage ("product-images" bucket)
+// and fills in the Image URL field with the public URL. A storage failure
+// never breaks saving: the message says so plainly and the URL field
+// stays usable.
+function ImageUploadField({ onUrl }) {
+  const [uploading, setUploading] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+
+  const handleFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploading(true); setErr(''); setMsg('');
+    try {
+      const url = await uploadImage(file);
+      onUrl(url);
+      setMsg('Image uploaded — its URL is now in the Image URL field below.');
+    } catch (e) {
+      setErr(`Upload failed (${e?.message || 'storage not available'}). The "product-images" bucket may not be set up yet — see supabase-setup.sql. You can still paste an Image URL, and saving still works.`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div>
+      <span className="mb-1.5 block text-sm font-medium text-forest">Upload image</span>
+      <input type="file" accept="image/*" onChange={handleFile} disabled={uploading}
+        className="w-full rounded-xl border border-stone/20 bg-linen px-3 py-2.5 text-sm text-forest file:mr-3 file:rounded-full file:border-0 file:bg-harvest file:px-4 file:py-1.5 file:text-sm file:font-semibold file:text-linen" />
+      {uploading && <p className="mt-1.5 text-sm text-stone">Uploading…</p>}
+      {msg && <p className="mt-1.5 text-sm text-emerald-700">{msg}</p>}
+      {err && <p className="mt-1.5 text-sm text-red-700">{err}</p>}
+    </div>
+  );
+}
+
+const emptySupplierForm = {
+  name: '', region: '', story: '', product_range: '', image_url: '',
+};
+
+// Store-settings form, seeded from the current (possibly Admin-overridden)
+// store values. Hours rows carry both the display string and the numeric
+// open/close hours the open/closed status is computed from.
+function storeFormFromStore() {
+  const row = (day, weekday) => {
+    const hoursRow = STORE.hours.find((h) => h.day === day) || { day, time: '' };
+    const [o, c] = STORE.openHours[weekday] || [7, 20];
+    return { day, time: hoursRow.time, open: o, close: c };
+  };
+  return {
+    address: STORE.address,
+    addressShort: STORE.addressShort,
+    phone: STORE.phone,
+    email: STORE.email,
+    lat: String(STORE.coords.lat),
+    lng: String(STORE.coords.lng),
+    statusOverride: STORE.statusOverride || 'auto',
+    hours: [
+      row('Monday – Friday', 1),
+      row('Saturday', 6),
+      row('Sunday', 0),
+    ],
+  };
+}
+
 function fmtDate(d) {
   if (!d) return '';
   try { return new Date(d).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', year: 'numeric' }); }
@@ -63,6 +129,18 @@ export default function Admin() {
   // Orders
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+
+  // Suppliers (same format as products)
+  const [suppliers, setSuppliers] = useState([]);
+  const [supplierForm, setSupplierForm] = useState(emptySupplierForm);
+  const [editingSupplier, setEditingSupplier] = useState(null);
+  const [supplierMsg, setSupplierMsg] = useState('');
+  const [supplierErr, setSupplierErr] = useState('');
+
+  // Store settings
+  const [storeForm, setStoreForm] = useState(storeFormFromStore);
+  const [storeMsg, setStoreMsg] = useState('');
+  const [storeErr, setStoreErr] = useState('');
 
   // Password change
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
@@ -87,8 +165,23 @@ export default function Admin() {
     ordersApi.list().then(setOrders).catch(() => setOrders([])).finally(() => setOrdersLoading(false));
   };
 
+  const loadSuppliers = () =>
+    suppliersApi.list('-created_at', 200).then(setSuppliers).catch(() => setSuppliers([]));
+
+  const loadStoreSettings = async () => {
+    try {
+      const saved = await storeSettingsApi.get();
+      if (saved) {
+        applyStoreSettings(saved);
+        setStoreForm(storeFormFromStore());
+      }
+    } catch {
+      // Local / compiled-in defaults already in the form — keep them.
+    }
+  };
+
   useEffect(() => {
-    if (isAuthenticated) { loadProducts(); loadOrders(); }
+    if (isAuthenticated) { loadProducts(); loadOrders(); loadSuppliers(); loadStoreSettings(); }
   }, [isAuthenticated]);
 
   // ── Product form ─────────────────────────────────────────────
@@ -129,6 +222,95 @@ export default function Admin() {
     await productsApi.delete(p.id);
     setProducts((c) => c.filter((item) => item.id !== p.id));
     setProductMsg(`${p.name} removed.`);
+  };
+
+  // ── Supplier form (same shape as the product form) ─────────────
+  const updateSupplierField = (event) => {
+    const { name, value } = event.target;
+    setSupplierForm((c) => ({ ...c, [name]: value }));
+  };
+
+  const handleSupplierSubmit = async (event) => {
+    event.preventDefault();
+    setSupplierErr(''); setSupplierMsg('');
+    try {
+      const saved = editingSupplier
+        ? await suppliersApi.update(editingSupplier.id, supplierForm)
+        : await suppliersApi.create(supplierForm);
+      setSupplierForm(emptySupplierForm); setEditingSupplier(null);
+      setSupplierMsg(saved?._local
+        ? 'Supplier saved in this browser only (Supabase suppliers table not available yet — run supabase-setup.sql to share it).'
+        : (editingSupplier ? 'Supplier updated.' : 'Supplier added.'));
+      loadSuppliers();
+    } catch (e) { setSupplierErr(e?.message || 'Could not save supplier.'); }
+  };
+
+  const startEditingSupplier = (s) => {
+    setEditingSupplier(s);
+    setSupplierForm({
+      name: s.name || '', region: s.region || '', story: s.story || '',
+      product_range: s.product_range || '', image_url: s.image_url || '',
+    });
+    setSupplierMsg(''); setSupplierErr('');
+    setTab('suppliers');
+  };
+
+  const handleSupplierDelete = async (s) => {
+    if (!window.confirm(`Remove ${s.name} from the suppliers?`)) return;
+    try {
+      await suppliersApi.delete(s.id);
+      setSuppliers((c) => c.filter((item) => String(item.id) !== String(s.id)));
+      setSupplierMsg(`${s.name} removed.`);
+    } catch (e) { setSupplierErr(e?.message || 'Could not remove supplier.'); }
+  };
+
+  // ── Store settings form ────────────────────────────────────────
+  const updateStoreField = (event) => {
+    const { name, value } = event.target;
+    setStoreForm((c) => ({ ...c, [name]: value }));
+  };
+
+  const updateStoreHoursRow = (index, field, value) => {
+    setStoreForm((c) => ({
+      ...c,
+      hours: c.hours.map((row, i) => (i === index ? { ...row, [field]: field === 'time' || field === 'day' ? value : Number(value) } : row)),
+    }));
+  };
+
+  const handleStoreSubmit = async (event) => {
+    event.preventDefault();
+    setStoreErr(''); setStoreMsg('');
+    const lat = Number(storeForm.lat);
+    const lng = Number(storeForm.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) { setStoreErr('Map latitude and longitude must be numbers.'); return; }
+    if (storeForm.hours.some((r) => !r.time || !(r.open < r.close))) { setStoreErr('Each hours row needs a display time and an opening hour before its closing hour.'); return; }
+    const mf = storeForm.hours[0];
+    const sat = storeForm.hours[1];
+    const sun = storeForm.hours[2];
+    const settings = {
+      address: storeForm.address.trim(),
+      addressShort: storeForm.addressShort.trim(),
+      phone: storeForm.phone.trim(),
+      phoneHref: `tel:+${storeForm.phone.replace(/[^0-9]/g, '')}`,
+      email: storeForm.email.trim(),
+      hours: storeForm.hours.map(({ day, time }) => ({ day, time })),
+      openHours: {
+        0: [sun.open, sun.close],
+        1: [mf.open, mf.close], 2: [mf.open, mf.close], 3: [mf.open, mf.close],
+        4: [mf.open, mf.close], 5: [mf.open, mf.close],
+        6: [sat.open, sat.close],
+      },
+      coords: { lat, lng },
+      statusOverride: storeForm.statusOverride,
+    };
+    try {
+      const saved = await storeSettingsApi.save(settings);
+      applyStoreSettings(settings);
+      setStoreForm(storeFormFromStore());
+      setStoreMsg(saved?._local
+        ? 'Store settings saved in this browser only (Supabase store_settings not available yet — run supabase-setup.sql to share them).'
+        : 'Store settings saved.');
+    } catch (e) { setStoreErr(e?.message || 'Could not save store settings.'); }
   };
 
   // ── Order status update ──────────────────────────────────────
@@ -216,9 +398,11 @@ export default function Admin() {
         </header>
 
         {/* Tabs */}
-        <div className="mb-8 flex gap-2 rounded-2xl bg-white p-1.5 border border-stone/15 w-fit">
+        <div className="mb-8 flex flex-wrap gap-2 rounded-2xl bg-white p-1.5 border border-stone/15 w-fit">
           {[
             { key: 'products', label: 'Products', icon: PackagePlus },
+            { key: 'suppliers', label: `Suppliers (${suppliers.length})`, icon: Users },
+            { key: 'store', label: 'Store', icon: Store },
             { key: 'orders',   label: `Orders (${orders.length})`, icon: ClipboardList },
             { key: 'password', label: 'Change Password', icon: Key },
           ].map(({ key, label, icon: Icon }) => (
@@ -248,6 +432,7 @@ export default function Admin() {
                   <Field label="Category *"><select name="category" value={form.category} onChange={updateField} className={inputClass}>{categories.map((c) => <option key={c}>{c}</option>)}</select></Field>
                 </div>
                 <Field label="Supplier"><input name="supplier" value={form.supplier} onChange={updateField} className={inputClass} placeholder="Supplier or maker" /></Field>
+                <ImageUploadField onUrl={(url) => setForm((c) => ({ ...c, image_url: url }))} />
                 <Field label="Image URL"><input type="text" name="image_url" value={form.image_url} onChange={updateField} className={inputClass} placeholder="/images/product.jpg or https://..." /></Field>
                 <label className="flex items-center gap-3 rounded-xl border border-stone/15 bg-linen p-3 text-sm font-medium">
                   <input type="checkbox" name="available_for_preorder" checked={form.available_for_preorder} onChange={updateField} className="h-4 w-4 accent-harvest" /> Available for click &amp; collect
@@ -283,6 +468,108 @@ export default function Admin() {
           </div>
         )}
 
+        {/* ── Suppliers tab (same format as products) ─────────────── */}
+        {tab === 'suppliers' && (
+          <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
+            <section className="h-fit rounded-3xl border border-stone/15 bg-white p-6 shadow-sm sm:p-8">
+              <div className="mb-6 flex items-center gap-3">
+                <div className="rounded-full bg-harvest/10 p-2 text-harvest-dark"><Users className="h-5 w-5" /></div>
+                <div>
+                  <h2 className="font-heading text-2xl font-bold">{editingSupplier ? 'Edit supplier' : 'New supplier'}</h2>
+                  <p className="text-sm text-stone">The people behind the produce — same fields as shown on the homepage.</p>
+                </div>
+              </div>
+              <form className="space-y-4" onSubmit={handleSupplierSubmit}>
+                <Field label="Name *"><input required name="name" value={supplierForm.name} onChange={updateSupplierField} className={inputClass} placeholder="e.g. Bellbird Bakery" /></Field>
+                <Field label="Location"><input name="region" value={supplierForm.region} onChange={updateSupplierField} className={inputClass} placeholder="e.g. Christchurch" /></Field>
+                <Field label="Description"><textarea name="story" value={supplierForm.story} onChange={updateSupplierField} className={inputClass} rows="3" placeholder="What this supplier is known for" /></Field>
+                <Field label="Product summary"><input name="product_range" value={supplierForm.product_range} onChange={updateSupplierField} className={inputClass} placeholder="e.g. Sourdough breads, French pastries" /></Field>
+                <ImageUploadField onUrl={(url) => setSupplierForm((c) => ({ ...c, image_url: url }))} />
+                <Field label="Image URL"><input type="text" name="image_url" value={supplierForm.image_url} onChange={updateSupplierField} className={inputClass} placeholder="/images/supplier.jpg or https://..." /></Field>
+                {supplierForm.image_url && <img src={supplierForm.image_url} alt="" className="h-24 w-24 rounded-xl object-cover" />}
+                {supplierErr && <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{supplierErr}</p>}
+                {supplierMsg && <p className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"><Check className="h-4 w-4" /> {supplierMsg}</p>}
+                <div className="flex gap-3">
+                  <button type="submit" className="flex-1 rounded-full bg-harvest px-5 py-3 text-sm font-semibold text-linen hover:bg-harvest-dark">{editingSupplier ? 'Save changes' : 'Add supplier'}</button>
+                  {editingSupplier && <button type="button" onClick={() => { setEditingSupplier(null); setSupplierForm(emptySupplierForm); setSupplierErr(''); }} className="rounded-full border border-stone/20 px-5 py-3 text-sm font-semibold text-forest hover:border-harvest">Cancel</button>}
+                </div>
+              </form>
+            </section>
+
+            <section className="rounded-3xl border border-stone/15 bg-white p-6 shadow-sm sm:p-8">
+              <div className="mb-6 flex items-end justify-between gap-4">
+                <div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-harvest">The people behind the produce</p><h2 className="mt-2 font-heading text-2xl font-bold">Suppliers ({suppliers.length})</h2></div>
+                <Link to="/#suppliers" className="text-sm font-semibold text-harvest-dark hover:text-harvest">View section</Link>
+              </div>
+              {suppliersApi.isLocalMode() && (
+                <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">Supabase suppliers table not available — changes here are saved in this browser only until supabase-setup.sql is run.</p>
+              )}
+              <div className="space-y-3">
+                {suppliers.map((s) => (
+                  <article key={s.id || s.name} className="flex items-center gap-3 rounded-2xl border border-stone/15 bg-linen p-3 sm:gap-4">
+                    <img src={s.image_url || '/images/pantry.jpg'} alt="" className="h-16 w-16 rounded-xl object-cover" />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate font-heading font-bold">{s.name}</h3>
+                      <p className="text-sm text-stone">{s.region}{s.product_range ? ` · ${s.product_range}` : ''}</p>
+                    </div>
+                    <button type="button" onClick={() => startEditingSupplier(s)} className="rounded-full p-2 text-stone hover:bg-harvest/10 hover:text-harvest-dark" aria-label={`Edit ${s.name}`}><Pencil className="h-4 w-4" /></button>
+                    <button type="button" onClick={() => handleSupplierDelete(s)} className="rounded-full p-2 text-stone hover:bg-red-50 hover:text-red-700" aria-label={`Remove ${s.name}`}><Trash2 className="h-4 w-4" /></button>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* ── Store settings tab ───────────────────────────────────── */}
+        {tab === 'store' && (
+          <section className="max-w-3xl rounded-3xl border border-stone/15 bg-white p-6 shadow-sm sm:p-8">
+            <div className="mb-6 flex items-center gap-3">
+              <div className="rounded-full bg-harvest/10 p-2 text-harvest-dark"><Store className="h-5 w-5" /></div>
+              <div>
+                <h2 className="font-heading text-2xl font-bold">Store details &amp; hours</h2>
+                <p className="text-sm text-stone">These drive the homepage status, the hours card, the contact section and the map pin. Status is normally worked out from the hours; override it only for a one-off closure or opening.</p>
+              </div>
+            </div>
+            <form className="space-y-4" onSubmit={handleStoreSubmit}>
+              <Field label="Address"><input name="address" value={storeForm.address} onChange={updateStoreField} className={inputClass} /></Field>
+              <Field label="Short address (shown on the hero hours card)"><input name="addressShort" value={storeForm.addressShort} onChange={updateStoreField} className={inputClass} /></Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Phone"><input name="phone" value={storeForm.phone} onChange={updateStoreField} className={inputClass} /></Field>
+                <Field label="Email"><input type="email" name="email" value={storeForm.email} onChange={updateStoreField} className={inputClass} /></Field>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Map latitude"><input type="number" step="any" name="lat" value={storeForm.lat} onChange={updateStoreField} className={inputClass} /></Field>
+                <Field label="Map longitude"><input type="number" step="any" name="lng" value={storeForm.lng} onChange={updateStoreField} className={inputClass} /></Field>
+              </div>
+              <Field label="Current status">
+                <select name="statusOverride" value={storeForm.statusOverride} onChange={updateStoreField} className={inputClass}>
+                  <option value="auto">Auto — work it out from the hours</option>
+                  <option value="open">Open (override)</option>
+                  <option value="closed">Closed (override)</option>
+                </select>
+              </Field>
+              <div>
+                <span className="mb-1.5 block text-sm font-medium text-forest">Opening hours</span>
+                <div className="space-y-3">
+                  {storeForm.hours.map((row, i) => (
+                    <div key={row.day} className="grid gap-3 sm:grid-cols-[1fr_1.4fr_0.6fr_0.6fr] sm:items-center">
+                      <span className="text-sm font-medium text-forest">{row.day}</span>
+                      <input value={row.time} onChange={(e) => updateStoreHoursRow(i, 'time', e.target.value)} className={inputClass} placeholder="7:00 AM – 8:00 PM" aria-label={`${row.day} display time`} />
+                      <input type="number" min="0" max="24" value={row.open} onChange={(e) => updateStoreHoursRow(i, 'open', e.target.value)} className={inputClass} aria-label={`${row.day} opens (24h)`} />
+                      <input type="number" min="0" max="24" value={row.close} onChange={(e) => updateStoreHoursRow(i, 'close', e.target.value)} className={inputClass} aria-label={`${row.day} closes (24h)`} />
+                    </div>
+                  ))}
+                  <p className="text-xs text-stone">The two numbers per row are the opening and closing hours in 24-hour time (e.g. 7 and 20) — those are what the Open/Closed status uses.</p>
+                </div>
+              </div>
+              {storeErr && <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{storeErr}</p>}
+              {storeMsg && <p className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"><Check className="h-4 w-4" /> {storeMsg}</p>}
+              <button type="submit" className="w-full rounded-full bg-harvest px-5 py-3 text-sm font-semibold text-linen hover:bg-harvest-dark">Save store settings</button>
+            </form>
+          </section>
+        )}
+
         {/* ── Orders tab ─────────────────────────────────────────── */}
         {tab === 'orders' && (
           <section className="rounded-3xl border border-stone/15 bg-white p-6 shadow-sm sm:p-8">
@@ -311,7 +598,7 @@ export default function Admin() {
                   <tbody className="divide-y divide-stone/10">
                     {orders.map((o) => (
                       <tr key={o.id} className="align-top">
-                        <td className="py-3 pr-4 font-mono text-xs text-stone">{String(o.id).slice(0,8)}…</td>
+                        <td className="py-3 pr-4 font-mono text-xs text-stone" title={o.id ? `Full order id: ${o.id}` : undefined}>{o.short_reference ? `PGS-${o.short_reference}` : `${String(o.id).slice(0,8)}…`}</td>
                         <td className="py-3 pr-4">
                           <div className="font-semibold text-forest">{o.customer_name}</div>
                           <div className="text-stone">{o.phone}</div>

@@ -1,10 +1,11 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowRight, Clock, ChevronDown } from "lucide-react";
-import { STORE, getStoreStatus } from "@/lib/storeInfo";
+import { STORE, getStoreStatus, getTodayHours } from "@/lib/storeInfo";
 
 export default function Hero() {
   const status = getStoreStatus();
+  const todayHours = getTodayHours();
 
   return (
     <section
@@ -17,7 +18,7 @@ export default function Hero() {
         alt="Pegasus General Store — From Storefront to Community Market"
         className="absolute inset-0 h-full w-full object-cover object-center"
         loading="eager"
-        fetchpriority="high"
+        fetchPriority="high"
       />
 
       {/* Soft dark overlay for legibility */}
@@ -43,6 +44,15 @@ export default function Hero() {
         <p className="mt-2 font-heading font-light tracking-[0.5em] text-white/80 text-sm sm:text-base uppercase">
           General&nbsp;Store
         </p>
+
+        {/* Side taglines — restored from the original hero design, restyled
+            as clean pills instead of the highlighted ovals in the reference. */}
+        <span className="hidden xl:block absolute left-10 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/40 bg-white/10 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-sm whitespace-nowrap">
+          We look like this
+        </span>
+        <span className="hidden xl:block absolute right-10 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/40 bg-white/10 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-sm whitespace-nowrap">
+          We treat you like this
+        </span>
 
         {/* Description */}
         <p className="mt-7 max-w-xl font-body text-white/90 text-sm sm:text-base leading-relaxed drop-shadow">
@@ -78,7 +88,7 @@ export default function Hero() {
       <div className="absolute bottom-6 right-6 z-10 rounded-2xl bg-linen/90 px-5 py-3 text-left shadow-lg backdrop-blur sm:right-8">
         <div className="flex items-center gap-2 text-forest">
           <Clock className="h-4 w-4 text-harvest" />
-          <span className="text-sm font-semibold">Open today {STORE.hours[0].time}</span>
+          <span className="text-sm font-semibold">Open today {todayHours.time}</span>
         </div>
         <div className="mt-0.5 text-xs text-stone">{STORE.addressShort}</div>
       </div>
