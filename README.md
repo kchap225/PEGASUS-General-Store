@@ -135,6 +135,18 @@ Once the site is running, these are the main pages:
 - `/account` — Customer account (when signed in)
 - `/admin` — Admin panel (only for accounts with `role: "admin"` in Supabase). Admin tabs are **Products**, **Suppliers**, **Orders**, **Store**, and **Change Password**.
 
+## Contact-form email (Resend)
+
+The "Message us" form on the homepage does not send mail on its own. It posts to a Cloudflare Pages Function at `functions/api/contact.js`, which sends the message via Resend to `shaipat01@gmail.com` and `jim@jwmorentz.com`, with Reply-To set to the customer's email.
+
+Setup (one-time, in the Cloudflare dashboard, not in code):
+
+1. Create a free Resend account and copy its API key. Never put the key in the code, in `.env`, or in Git — it is a secret.
+2. In Cloudflare Pages, open the `pegasus-general-store` project → Settings → Environment variables, and add `RESEND_API_KEY` with that key. Redeploy after adding it.
+3. Until the sending domain is verified in Resend, mail is sent from `onboarding@resend.dev` and Resend only delivers test mail to the Resend account owner's email. To send to the two addresses above and from `hello@pegasusgeneralstore.co.nz`, verify `pegasusgeneralstore.co.nz` in Resend (Domains → Add a domain) and add the DNS records it gives you in Cloudflare, then set `CONTACT_FROM` to `hello@pegasusgeneralstore.co.nz` in the same Environment variables screen and redeploy.
+
+If the form says it could not send, check Resend → Logs first, then check the Cloudflare variable above is set.
+
 ## Other useful commands
 
 Run these from the project folder:
@@ -214,6 +226,8 @@ npx wrangler pages deploy dist --project-name=pegasus-general-store
 ## Where things live
 
 ```text
+├── functions/api/       # Cloudflare Pages Functions — contact.js sends the
+│                    # contact form via Resend (key is a Cloudflare env var)
 ├── public/              # Static assets (images, favicon)
 │   └── images/          # Local store & product photography
 ├── src/

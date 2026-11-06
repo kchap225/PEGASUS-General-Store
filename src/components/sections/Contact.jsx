@@ -7,17 +7,39 @@ import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
 export default function Contact() {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
 
   const updateField = (event) => {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
     setSubmitted(false);
+    setSendError("");
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    setSubmitted(true);
-    setForm({ name: "", email: "", subject: "", message: "" });
+    setSending(true);
+    setSendError("");
+    setSubmitted(false);
+    try {
+      // POSTs to the Cloudflare Pages Function in functions/api/contact.js,
+      // which sends the message via Resend to shaipat01@gmail.com and
+      // jim@jwmorentz.com. The API key lives only as a Cloudflare env var.
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Could not send the message.");
+      setSubmitted(true);
+      setForm({ name: "", email: "", subject: "", message: "" });
+    } catch (error) {
+      setSendError(error.message || "Could not send the message. Please try again later.");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -104,7 +126,8 @@ export default function Contact() {
                 <label className="block"><span className="mb-1.5 block text-sm font-medium text-forest">Subject</span><input required name="subject" value={form.subject} onChange={updateField} className="w-full rounded-xl border border-stone/20 bg-white px-3 py-2.5 text-forest outline-none placeholder:text-stone/60 focus:border-harvest focus:ring-2 focus:ring-harvest/10" placeholder="How can we help?" /></label>
                 <label className="block"><span className="mb-1.5 block text-sm font-medium text-forest">Message</span><textarea required name="message" value={form.message} onChange={updateField} rows="5" className="w-full rounded-xl border border-stone/20 bg-white px-3 py-2.5 text-forest outline-none placeholder:text-stone/60 focus:border-harvest focus:ring-2 focus:ring-harvest/10" placeholder="Tell us a little more..." /></label>
                 {submitted && <p className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"><CheckCircle2 className="h-4 w-4" /> Thanks, your message has been received.</p>}
-                <button type="submit" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-harvest px-5 py-3 text-sm font-semibold text-linen transition-colors hover:bg-harvest-dark"><Send className="h-4 w-4" /> Send message</button>
+                {sendError && <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{sendError}</p>}
+                <button type="submit" disabled={sending} className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-harvest px-5 py-3 text-sm font-semibold text-linen transition-colors hover:bg-harvest-dark disabled:opacity-60"><Send className="h-4 w-4" /> {sending ? "Sending..." : "Send message"}</button>
               </form>
             </div>
           </Reveal>
