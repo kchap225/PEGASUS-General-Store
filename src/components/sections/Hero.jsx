@@ -30,6 +30,19 @@ export default function Hero() {
       {/* Bottom gradient */}
       <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/60 to-transparent" />
 
+      {/* ── Side taglines — desktop / large screens ──────────────
+          Yellow pills exactly as in the homepage mockup
+          (Pegasus_Home_Page_With_Words.pptx): pale-yellow #FFFFCC
+          background, dark text, rounded corners, left and right
+          of the hero at mid-height. Visible from lg (1024px) up,
+          where there is room beside the centre content. */}
+      <span className="hidden lg:block absolute left-6 xl:left-10 top-1/2 z-20 -translate-y-1/2 rounded-lg bg-[#FFFFCC] px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-forest shadow-lg whitespace-nowrap">
+        We look like this
+      </span>
+      <span className="hidden lg:block absolute right-6 xl:right-10 top-1/2 z-20 -translate-y-1/2 rounded-lg bg-[#FFFFCC] px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-forest shadow-lg whitespace-nowrap">
+        We treat you like this
+      </span>
+
       {/* ── Centre content ─────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 24 }}
@@ -37,6 +50,19 @@ export default function Hero() {
         transition={{ duration: 0.9, ease: "easeOut" }}
         className="absolute inset-0 z-10 flex flex-col items-center justify-center px-5 text-center"
       >
+        {/* Side taglines — small screens: the side pills would overlap
+            the centre title at <1024px (which is why they used to be
+            hidden below xl), so show the same two yellow pills as a
+            row above the title instead. Same text, same #FFFFCC. */}
+        <div className="mb-5 flex flex-wrap items-center justify-center gap-2 lg:hidden">
+          <span className="rounded-lg bg-[#FFFFCC] px-3 py-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-[0.14em] text-forest shadow-lg whitespace-nowrap">
+            We look like this
+          </span>
+          <span className="rounded-lg bg-[#FFFFCC] px-3 py-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-[0.14em] text-forest shadow-lg whitespace-nowrap">
+            We treat you like this
+          </span>
+        </div>
+
         {/* Logo text */}
         <h1 className="font-heading font-extrabold text-white tracking-[0.18em] text-5xl sm:text-7xl lg:text-8xl drop-shadow-lg">
           PEGASUS
@@ -44,15 +70,6 @@ export default function Hero() {
         <p className="mt-2 font-heading font-light tracking-[0.5em] text-white/80 text-sm sm:text-base uppercase">
           General&nbsp;Store
         </p>
-
-        {/* Side taglines — restored from the original hero design, restyled
-            as clean pills instead of the highlighted ovals in the reference. */}
-        <span className="hidden xl:block absolute left-10 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/40 bg-white/10 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-sm whitespace-nowrap">
-          We look like this
-        </span>
-        <span className="hidden xl:block absolute right-10 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/40 bg-white/10 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-sm whitespace-nowrap">
-          We treat you like this
-        </span>
 
         {/* Description */}
         <p className="mt-7 max-w-xl font-body text-white/90 text-sm sm:text-base leading-relaxed drop-shadow">
