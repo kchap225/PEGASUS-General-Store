@@ -147,6 +147,13 @@ Setup (one-time, in the Cloudflare dashboard, not in code):
 
 If the form says it could not send, check Resend → Logs first, then check the Cloudflare variable above is set.
 
+## Click & Collect order emails (Resend)
+
+Order emails use the same Resend account and the same two Cloudflare variables (`RESEND_API_KEY`, `CONTACT_FROM`). No extra setup is needed.
+
+- **When an order is placed** (`functions/api/order-email.js`, type `order-placed`): a confirmation goes to the customer's email, and a notification goes to `shaipat01@gmail.com` and `jim@jwmorentz.com`. The customer email is required on the Click & Collect form, so every new order has one. A failed order email never cancels the order — the customer still sees their PGS reference on screen, with a warning that the email could not be sent.
+- **When Admin changes an order's status** (pending, confirmed, ready, collected, cancelled): the customer gets an email for the new status, e.g. "Your order is ready for collection". The status is saved in Supabase even if that email fails, and Admin shows a warning. Orders placed before this was added may have no customer email — those get no status email, and Admin says so.
+
 ## Other useful commands
 
 Run these from the project folder:
