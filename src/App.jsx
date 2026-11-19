@@ -10,6 +10,7 @@ import ClickCollect from './pages/ClickCollect';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
 import Account from './pages/Account';
+import ChatWidget from "./components/ai/ChatWidget";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
             <Route path="/account" element={<Account />} />
             <Route path="*" element={<PageNotFound />} />
           </Routes>
+          <ChatWidget />
         </Router>
         <Toaster />
       </QueryClientProvider>
