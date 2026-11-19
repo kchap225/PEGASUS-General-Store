@@ -314,9 +314,35 @@ export default function Admin() {
   };
 
   // ── Order status update ──────────────────────────────────────
-  const updateOrderStatus = async (orderId, status) => {
-    const { error } = await supabase.from('orders').update({ status }).eq('id', orderId);
-    if (!error) setOrders((c) => c.map((o) => o.id === orderId ? { ...o, status } : o));
+  // Updates the order in Supabase, then emails the customer about the
+  // new status via the Pages Function in functions/api/order-email.js.
+  // The status change is kept even if the email fails — an email
+  // failure must never undo an Admin action.
+  const [orderEmailMsg, setOrderEmailMsg] = useState('');
+  const updateOrderStatus = async (order, status) => {
+    if (!order || order.status === status) return;
+    const { error } = await supabase.from('orders').update({ status }).eq('id', order.id);
+    if (error) return;
+    const updated = { ...order, status };
+    setOrders((c) => c.map((o) => o.id === order.id ? updated : o));
+    setOrderEmailMsg('');
+    if (!order.email) {
+      setOrderEmailMsg(`Status saved as ${status}, but no email was sent — this order has no customer email.`);
+      return;
+    }
+    try {
+      const response = await fetch('/api/order-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'status-changed', order: updated }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.emailedCustomer) {
+        setOrderEmailMsg(`Status saved as ${status}, but the customer email could not be sent${data.reason ? ` — ${data.reason}` : '.'}`);
+      }
+    } catch {
+      setOrderEmailMsg(`Status saved as ${status}, but the customer email could not be sent.`);
+    }
   };
 
   // ── Login ────────────────────────────────────────────────────
@@ -577,6 +603,7 @@ export default function Admin() {
               <div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-harvest">Click &amp; collect</p><h2 className="mt-2 font-heading text-2xl font-bold">Orders ({orders.length})</h2></div>
               <button type="button" onClick={loadOrders} className="rounded-full border border-stone/20 px-4 py-2 text-sm font-semibold text-forest hover:border-harvest">Refresh</button>
             </div>
+            {orderEmailMsg && <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">{orderEmailMsg}</p>}
             {ordersLoading ? (
               <p className="text-stone text-sm">Loading orders…</p>
             ) : orders.length === 0 ? (
@@ -615,7 +642,7 @@ export default function Admin() {
                         <td className="py-3 pr-4 font-semibold text-forest">${Number(o.total || 0).toFixed(2)}</td>
                         <td className="py-3 pr-4"><StatusBadge status={o.status} /></td>
                         <td className="py-3">
-                          <select value={o.status} onChange={(e) => updateOrderStatus(o.id, e.target.value)}
+                          <select value={o.status} onChange={(e) => updateOrderStatus(o, e.target.value)}
                             className="rounded-lg border border-stone/20 bg-linen px-2 py-1.5 text-xs text-forest outline-none focus:border-harvest">
                             {['pending','confirmed','ready','collected','cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
                           </select>

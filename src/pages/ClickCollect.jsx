@@ -26,6 +26,7 @@ export default function ClickCollect() {
   const [form, setForm] = useState(emptyForm);
   const [submitted, setSubmitted] = useState(null);
   const [error, setError] = useState('');
+  const [emailWarning, setEmailWarning] = useState('');
 
   useEffect(() => {
     productsApi.list('-created_at', 100)
@@ -58,26 +59,47 @@ export default function ClickCollect() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!form.customer_name || !form.phone || !form.collection_date || !form.collection_time || cartItems.length === 0) {
-      setError('Please add at least one item and complete your name, phone, collection date and time.');
+    if (!form.customer_name || !form.phone || !form.email || !form.collection_date || !form.collection_time || cartItems.length === 0) {
+      setError('Please add at least one item and complete your name, phone, email, collection date and time.');
       return;
     }
 
     try {
       // Capture the pickup slot before the form is cleared below.
       const pickup = { collection_date: form.collection_date, collection_time: form.collection_time };
+      const itemsText = cartItems.map((item) => `${item.name} x${item.qty}`).join(', ');
       const response = await ordersApi.submitClickCollectOrder({
         ...form,
-        items: cartItems.map((item) => `${item.name} x${item.qty}`).join(', '),
+        items: itemsText,
         total: subtotal,
       });
 
       // The full Supabase id stays on the order object (background / Admin
       // use) but is never rendered to the customer — see the display below.
-      setSubmitted({ ...response?.order, ...pickup });
+      const placedOrder = { ...response?.order, ...pickup };
+      setSubmitted(placedOrder);
       setError('');
+      setEmailWarning('');
       setCart({});
       setForm(emptyForm);
+
+      // Email the confirmation to the customer and a notification to the
+      // store via the Pages Function in functions/api/order-email.js.
+      // A failed email must never undo a placed order, so this runs
+      // after the confirmation is shown and its failure only warns.
+      try {
+        const emailResponse = await fetch('/api/order-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'order-placed',
+            order: { ...placedOrder, items: itemsText, total: subtotal },
+          }),
+        });
+        if (!emailResponse.ok) throw new Error('Order email failed.');
+      } catch {
+        setEmailWarning('Your order is placed, but we could not email your confirmation — please save your reference above.');
+      }
     } catch (submitError) {
       setError(submitError?.message || 'Your order could not be submitted right now.');
     }
@@ -198,8 +220,8 @@ export default function ClickCollect() {
                 <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputClass} placeholder="021 123 4567" />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-forest">Email</label>
-                <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputClass} placeholder="you@example.com" />
+                <label className="mb-1 block text-sm font-medium text-forest">Email *</label>
+                <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputClass} placeholder="you@example.com" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -225,9 +247,10 @@ export default function ClickCollect() {
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                   <p className="font-semibold">Order placed! ✓</p>
                   <p className="mt-1">Reference: {formatPickupReference(submitted)}</p>
-                  <p className="mt-1 text-xs">Please bring this reference when collecting. Payment at counter.</p>
+                  <p className="mt-1 text-xs">Please bring this reference when collecting. Payment at counter. A confirmation email is on its way.</p>
                 </div>
               )}
+              {emailWarning && <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">{emailWarning}</p>}
 
               <button type="submit" className="w-full rounded-full bg-harvest px-5 py-3 text-sm font-semibold text-linen transition-colors hover:bg-harvest-dark">
                 Place order — Pay at counter

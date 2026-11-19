@@ -33,7 +33,6 @@ export const IMAGES = {
   storefront: "/images/storefront.jpg",
   sourdough: "/images/sourdough.jpg",
   wine: "/images/wine.jpg",
-  postParcel: "/images/post-parcel.jpg",
   pantry: "/images/pantry.jpg",
   biltong: "/images/biltong.jpg",
   gfBakery: "/images/gf-bakery.jpg",

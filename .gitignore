@@ -1,3 +1,7 @@
+# macOS / IDE files (removed from the repo 2026-11-05 — not needed to build)
+.DS_Store
+.idea/
+
 # Logs
 logs
 *.log
@@ -141,3 +145,4 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+server/.env
