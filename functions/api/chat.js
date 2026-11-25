@@ -215,12 +215,88 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
+// Best-effort, instance-level rate limiting
+const RATE_LIMIT = 10;
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const MAX_TRACKED_IPS = 10000;
+
+const requestCounts = new Map();
+
+function checkRateLimit(request) {
+  const ip =
+    request.headers.get("CF-Connecting-IP") || "unknown";
+
+  const now = Date.now();
+
+  // Remove expired request counters
+  for (const [key, entry] of requestCounts) {
+    if (now >= entry.resetAt) {
+      requestCounts.delete(key);
+    }
+  }
+
+  let entry = requestCounts.get(ip);
+
+  if (!entry) {
+    // Prevent unlimited memory growth
+    if (requestCounts.size >= MAX_TRACKED_IPS) {
+      return {
+        allowed: false,
+        retryAfter: 60,
+      };
+    }
+
+    entry = {
+      count: 0,
+      resetAt: now + RATE_LIMIT_WINDOW_MS,
+    };
+
+    requestCounts.set(ip, entry);
+  }
+
+  if (entry.count >= RATE_LIMIT) {
+    return {
+      allowed: false,
+      retryAfter: Math.max(
+        1,
+        Math.ceil((entry.resetAt - now) / 1000)
+      ),
+    };
+  }
+
+  entry.count += 1;
+
+  return {
+    allowed: true,
+    retryAfter: 0,
+  };
+}
+
 export async function onRequestOptions() {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
 }
 
 export async function onRequestPost({ request, env }) {
   try {
+    // Check rate limit before processing the request
+    const rateLimit = checkRateLimit(request);
+
+    if (!rateLimit.allowed) {
+      return Response.json(
+        {
+          error:
+            "Too many requests. Please wait a moment and try again.",
+        },
+        {
+          status: 429,
+          headers: {
+            ...CORS_HEADERS,
+            "Retry-After": String(rateLimit.retryAfter),
+          },
+        }
+      );
+    }
+
     // Parse and validate body
     let body;
     try {
